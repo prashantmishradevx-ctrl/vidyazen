@@ -1,0 +1,322 @@
+// VidyaZen - Smart Institute Management System
+// Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum FeeStatus {
+  PENDING
+  PAID
+  OVERDUE
+  PARTIAL
+}
+
+enum ExamType {
+  UNIT_TEST
+  MID_TERM
+  FINAL
+  ASSIGNMENT
+  PROJECT
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(STUDENT)
+  avatar        String?
+  phone         String?
+  address       String?
+  dateOfBirth   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  student       Student?
+  teacher       Teacher?
+  parent        Parent?
+  admin         Admin?
+  announcements Announcement[]
+  sessions      Session[]
+  accounts      Account[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Admin {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  employeeId String   @unique
+  department String?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admins")
+}
+
+model Teacher {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  employeeId   String   @unique
+  qualification String?
+  experience   Int?     @default(0)
+  specialization String?
+  salary       Float?
+  joiningDate  DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classes      Class[]
+  subjects     TeacherSubject[]
+  attendance   AttendanceRecord[] @relation("TeacherAttendance")
+  grades       Grade[]
+
+  @@map("teachers")
+}
+
+model Student {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  studentId     String   @unique
+  classId       String?
+  rollNumber    String?
+  parentId      String?
+  admissionDate DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class         Class?            @relation(fields: [classId], references: [id])
+  parent        Parent?           @relation(fields: [parentId], references: [id])
+  attendance    AttendanceRecord[]
+  grades        Grade[]
+  fees          Fee[]
+
+  @@map("students")
+}
+
+model Parent {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  occupation   String?
+  relation     String?  @default("Parent")
+  createdAt    DateTime @default(now())
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students     Student[]
+
+  @@map("parents")
+}
+
+model Class {
+  id          String   @id @default(cuid())
+  name        String   // e.g., "Grade 10A"
+  grade       String   // e.g., "10"
+  section     String   // e.g., "A"
+  teacherId   String?
+  capacity    Int      @default(40)
+  room        String?
+  academicYear String  @default("2024-25")
+  createdAt   DateTime @default(now())
+
+  teacher     Teacher?   @relation(fields: [teacherId], references: [id])
+  students    Student[]
+  subjects    ClassSubject[]
+  timetable   Timetable[]
+  attendance  AttendanceRecord[]
+
+  @@unique([grade, section, academicYear])
+  @@map("classes")
+}
+
+model Subject {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  description String?
+  credits     Int      @default(4)
+  createdAt   DateTime @default(now())
+
+  classes     ClassSubject[]
+  teachers    TeacherSubject[]
+  timetable   Timetable[]
+  grades      Grade[]
+
+  @@map("subjects")
+}
+
+model ClassSubject {
+  id        String @id @default(cuid())
+  classId   String
+  subjectId String
+
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, subjectId])
+  @@map("class_subjects")
+}
+
+model TeacherSubject {
+  id        String @id @default(cuid())
+  teacherId String
+  subjectId String
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, subjectId])
+  @@map("teacher_subjects")
+}
+
+model Timetable {
+  id        String   @id @default(cuid())
+  classId   String
+  subjectId String
+  day       String   // Monday, Tuesday, etc.
+  startTime String   // "09:00"
+  endTime   String   // "10:00"
+  room      String?
+  createdAt DateTime @default(now())
+
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@map("timetables")
+}
+
+model AttendanceRecord {
+  id        String           @id @default(cuid())
+  studentId String
+  classId   String
+  teacherId String
+  date      DateTime
+  status    AttendanceStatus @default(PRESENT)
+  remarks   String?
+  createdAt DateTime         @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation("TeacherAttendance", fields: [teacherId], references: [id])
+
+  @@unique([studentId, date, classId])
+  @@map("attendance_records")
+}
+
+model Grade {
+  id          String   @id @default(cuid())
+  studentId   String
+  subjectId   String
+  teacherId   String
+  examType    ExamType @default(UNIT_TEST)
+  marks       Float
+  maxMarks    Float    @default(100)
+  grade       String?  // A+, A, B+, etc.
+  remarks     String?
+  examDate    DateTime
+  createdAt   DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+
+  @@map("grades")
+}
+
+model Fee {
+  id          String    @id @default(cuid())
+  studentId   String
+  title       String    // "Tuition Fee", "Lab Fee", etc.
+  amount      Float
+  dueDate     DateTime
+  paidDate    DateTime?
+  status      FeeStatus @default(PENDING)
+  paymentMode String?   // Cash, Online, Cheque
+  receiptNo   String?
+  remarks     String?
+  createdAt   DateTime  @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("fees")
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  authorId    String
+  targetRole  Role?    // null = all roles
+  isPinned    Boolean  @default(false)
+  publishedAt DateTime @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("announcements")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  startDate   DateTime
+  endDate     DateTime
+  location    String?
+  type        String   @default("general") // holiday, exam, sport, cultural
+  createdAt   DateTime @default(now())
+
+  @@map("events")
+}
