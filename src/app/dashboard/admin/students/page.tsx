@@ -14,7 +14,7 @@ export default function StudentsPage() {
   const [showForm, setShowForm] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", dateOfBirth: "", classId: "", rollNumber: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", dateOfBirth: "", classId: "", sectionId: "", rollNumber: "" });
 
   useEffect(() => {
     loadStudents();
@@ -46,7 +46,7 @@ export default function StudentsPage() {
       if (res.ok) {
         showToast({ type: "success", title: "Student added successfully!" });
         setShowForm(false);
-        setForm({ name: "", email: "", phone: "", dateOfBirth: "", classId: "", rollNumber: "" });
+        setForm({ name: "", email: "", phone: "", dateOfBirth: "", classId: "", sectionId: "", rollNumber: "" });
         loadStudents();
       } else {
         const err = await res.json();
@@ -78,7 +78,7 @@ export default function StudentsPage() {
       key: "class",
       label: "Class",
       render: (row: any) => row.class ? (
-        <Badge variant="info">{row.class.name}</Badge>
+        <Badge variant="info">{row.class.className || row.class.name}{row.section ? ` - ${row.section.sectionName}` : ""}</Badge>
       ) : <span className="text-slate-400">—</span>,
     },
     { key: "roll", label: "Roll No", render: (row: any) => <span className="font-mono text-sm">{row.rollNumber || "—"}</span> },
@@ -167,11 +167,25 @@ export default function StudentsPage() {
                 <select
                   className="w-full border border-slate-200 focus:border-brand-500 text-slate-800 rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all bg-white"
                   value={form.classId}
-                  onChange={e => setForm(f => ({ ...f, classId: e.target.value }))}
+                  onChange={e => setForm(f => ({ ...f, classId: e.target.value, sectionId: "" }))}
                 >
                   <option value="">Select class</option>
                   {classes.map((c: any) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>{c.className || c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">Section</label>
+                <select
+                  className="w-full border border-slate-200 focus:border-brand-500 text-slate-800 rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all bg-white"
+                  value={form.sectionId}
+                  onChange={e => setForm(f => ({ ...f, sectionId: e.target.value }))}
+                  disabled={!form.classId}
+                >
+                  <option value="">Select section</option>
+                  {(classes.find((c: any) => c.id === form.classId)?.sections || []).map((s: any) => (
+                    <option key={s.id} value={s.id}>Section {s.sectionName}</option>
                   ))}
                 </select>
               </div>

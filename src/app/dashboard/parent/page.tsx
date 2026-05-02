@@ -25,7 +25,7 @@ export default function ParentDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold text-slate-900">Parent Dashboard</h1>
-        <p className="text-slate-500 text-sm mt-1">Monitor your child's academic progress</p>
+        <p className="text-slate-500 text-sm mt-1">Monitor your child&apos;s academic progress</p>
       </div>
 
       {children.length === 0 ? (
@@ -50,7 +50,7 @@ export default function ParentDashboard() {
                 <div className="flex-1">
                   <h2 className="font-display text-xl font-bold">{child.user?.name}</h2>
                   <p className="text-blue-100 text-sm mt-0.5">
-                    {child.class?.name} · Roll: {child.rollNumber || "—"} · ID: {child.studentId}
+                    {child.class?.className || child.class?.name} {child.section ? `· Section ${child.section.sectionName}` : ""} · Roll: {child.rollNumber || "—"} · ID: {child.studentId}
                   </p>
                 </div>
                 <div className="text-right hidden sm:block">
@@ -76,6 +76,19 @@ export default function ParentDashboard() {
 
               {/* Recent grades + pending fees */}
               <div className="grid lg:grid-cols-2 gap-4">
+                <Card title="Recent Attendance Updates">
+                  <div className="space-y-2">
+                    {attendance.length === 0 ? (
+                      <p className="text-slate-400 text-sm text-center py-6">No attendance records yet.</p>
+                    ) : attendance.slice(0, 5).map((record: any) => (
+                      <div key={record.id} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50">
+                        <span className="text-sm text-slate-700">{formatDate(record.date)}</span>
+                        <Badge variant={record.status === "PRESENT" ? "success" : record.status === "ABSENT" ? "danger" : record.status === "LATE" ? "warning" : "info"}>{record.status}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+
                 <Card title="Recent Exam Results">
                   <div className="space-y-2">
                     {grades.length === 0 ? (

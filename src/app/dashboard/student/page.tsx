@@ -28,6 +28,7 @@ export default function StudentDashboard() {
   const student = data?.student;
   const attendancePercent = data?.attendancePercent || 0;
   const recentGrades = student?.grades || [];
+  const recentAttendance = student?.attendance || [];
   const pendingFees = (student?.fees || []).filter((f: any) => f.status === "PENDING" || f.status === "OVERDUE");
   const avgMarks = recentGrades.length
     ? Math.round(recentGrades.reduce((s: number, g: any) => s + (g.marks / g.maxMarks) * 100, 0) / recentGrades.length)
@@ -40,7 +41,7 @@ export default function StudentDashboard() {
       <div>
         <h1 className="font-display text-2xl font-bold text-slate-900">My Dashboard</h1>
         <p className="text-slate-500 text-sm mt-1">
-          {student?.class?.name} · Roll No: {student?.rollNumber || "—"} · ID: {student?.studentId}
+          {student?.class?.className || student?.class?.name} {student?.section ? `· Section ${student.section.sectionName}` : ""} · Roll No: {student?.rollNumber || "—"} · ID: {student?.studentId}
         </p>
       </div>
 
@@ -52,6 +53,30 @@ export default function StudentDashboard() {
         <StatCard title="Subjects" value={student?.class?.subjects?.length || 0} icon={BookOpen} iconColor="bg-violet-500" delay={0.1} />
         <StatCard title="Dues Pending" value={pendingFees.length} subtitle={pendingFees.length > 0 ? "Action needed" : "All clear!"} icon={CreditCard} iconColor={pendingFees.length > 0 ? "bg-red-500" : "bg-green-500"} delay={0.15} />
       </div>
+
+      <Card title="Classmates" subtitle={student?.section ? `Section ${student.section.sectionName}` : "Assigned class"}>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          {(student?.section?.students || []).filter((s: any) => s.id !== student.id).slice(0, 8).map((mate: any) => (
+            <div key={mate.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">{mate.user?.name}</div>
+          ))}
+          {(student?.section?.students || []).length <= 1 && <p className="text-sm text-slate-400 py-4">No classmates found yet.</p>}
+        </div>
+      </Card>
+
+      <Card title="Recent Attendance" subtitle="Latest updates from your teacher">
+        <div className="space-y-2">
+          {recentAttendance.length === 0 ? (
+            <p className="text-sm text-slate-400 py-4 text-center">No attendance records yet.</p>
+          ) : (
+            recentAttendance.slice(0, 6).map((record: any) => (
+              <div key={record.id} className="flex items-center justify-between rounded-xl p-3 hover:bg-slate-50">
+                <span className="text-sm font-medium text-slate-700">{formatDate(record.date)}</span>
+                <Badge variant={record.status === "PRESENT" ? "success" : record.status === "ABSENT" ? "danger" : record.status === "LATE" ? "warning" : "info"}>{record.status}</Badge>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Attendance gauge */}

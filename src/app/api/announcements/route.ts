@@ -49,6 +49,22 @@ export async function POST(req: NextRequest) {
       include: { author: { select: { name: true, avatar: true, role: true } } },
     });
 
+    const users = await prisma.user.findMany({
+      where: targetRole ? { role: targetRole } : {},
+      select: { id: true },
+    });
+    if (users.length) {
+      await prisma.notification.createMany({
+        data: users.map((user) => ({
+          userId: user.id,
+          type: "ANNOUNCEMENT",
+          title,
+          message: content,
+          link: "/dashboard/notifications",
+        })),
+      });
+    }
+
     return NextResponse.json(announcement, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -45,6 +45,7 @@ export default function AdminDashboard() {
   const stats = data?.stats || {};
   const announcements = data?.recentAnnouncements || [];
   const events = data?.upcomingEvents || [];
+  const recentAttendance = data?.recentAttendance || [];
 
   // Mock chart data if no DB data yet
   const attendanceTrend = data?.attendanceTrend?.length > 0
@@ -183,6 +184,29 @@ export default function AdminDashboard() {
             <Bar dataKey="amount" fill="#0f87e8" radius={[6, 6, 0, 0]} name="Collection" />
           </BarChart>
         </ResponsiveContainer>
+      </Card>
+
+      <Card title="Recent Attendance Updates" subtitle="Latest records submitted by teachers">
+        <div className="space-y-3">
+          {recentAttendance.length === 0 ? (
+            <EmptyState icon={Calendar} title="No attendance updates" description="Teacher attendance updates will appear here." />
+          ) : (
+            recentAttendance.map((record: any) => (
+              <div key={record.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                <div>
+                  <div className="text-sm font-semibold text-slate-800">{record.student?.user?.name}</div>
+                  <div className="text-xs text-slate-400">
+                    {record.class?.className || record.class?.name}{record.section ? ` · Section ${record.section.sectionName}` : ""} · {formatDate(record.date)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="hidden sm:inline text-xs text-slate-400">By {record.teacher?.user?.name || "Teacher"}</span>
+                  <Badge variant={record.status === "PRESENT" ? "success" : record.status === "ABSENT" ? "danger" : record.status === "LATE" ? "warning" : "info"}>{record.status}</Badge>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </Card>
 
       {/* Bottom row */}

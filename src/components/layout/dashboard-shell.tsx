@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Session } from "next-auth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   GraduationCap, LayoutDashboard, Users, BookOpen, CalendarDays,
   BarChart3, Bell, CreditCard, FileText, Settings, LogOut, Menu, X,
-  ChevronRight, UserCheck, ClipboardList, Megaphone, CalendarCheck
+  ChevronRight, UserCheck, ClipboardList, Megaphone, CalendarCheck, Video, Palette
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 
@@ -29,11 +29,13 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Reports", href: "/dashboard/admin/reports", icon: BarChart3, roles: ["ADMIN"] },
 
   { label: "My Classes", href: "/dashboard/teacher/classes", icon: BookOpen, roles: ["TEACHER"] },
+  { label: "Classroom", href: "/dashboard/teacher/classroom", icon: FileText, roles: ["TEACHER"] },
   { label: "Attendance", href: "/dashboard/teacher/attendance", icon: CalendarCheck, roles: ["TEACHER"] },
   { label: "Grades", href: "/dashboard/teacher/grades", icon: ClipboardList, roles: ["TEACHER"] },
   { label: "Announcements", href: "/dashboard/teacher/announcements", icon: Megaphone, roles: ["TEACHER"] },
 
   { label: "My Grades", href: "/dashboard/student/grades", icon: ClipboardList, roles: ["STUDENT"] },
+  { label: "Classroom", href: "/dashboard/student/classroom", icon: FileText, roles: ["STUDENT"] },
   { label: "Attendance", href: "/dashboard/student/attendance", icon: CalendarCheck, roles: ["STUDENT"] },
   { label: "Timetable", href: "/dashboard/student/timetable", icon: CalendarDays, roles: ["STUDENT"] },
   { label: "Fees", href: "/dashboard/student/fees", icon: CreditCard, roles: ["STUDENT"] },
@@ -43,6 +45,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Attendance", href: "/dashboard/parent/attendance", icon: CalendarCheck, roles: ["PARENT"] },
   { label: "Fees", href: "/dashboard/parent/fees", icon: CreditCard, roles: ["PARENT"] },
   { label: "Announcements", href: "/dashboard/parent/announcements", icon: Bell, roles: ["PARENT"] },
+
+  { label: "Meetings", href: "/dashboard/meetings", icon: Video, roles: ["ADMIN", "TEACHER", "STUDENT", "PARENT"] },
+  { label: "Notifications", href: "/dashboard/notifications", icon: Bell, roles: ["ADMIN", "TEACHER", "STUDENT", "PARENT"] },
 ];
 
 const ROLE_COLORS: Record<string, string> = {
@@ -59,14 +64,36 @@ const ROLE_LABELS: Record<string, string> = {
   PARENT: "Parent",
 };
 
+const DASHBOARD_THEMES = [
+  { id: "classic", label: "Classic" },
+  { id: "ocean", label: "Ocean" },
+  { id: "forest", label: "Forest" },
+  { id: "rose", label: "Rose" },
+] as const;
+
+type DashboardTheme = (typeof DASHBOARD_THEMES)[number]["id"];
+
 export function DashboardShell({ session, children }: { session: Session; children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<DashboardTheme>("classic");
   const pathname = usePathname();
   const role = (session.user as any).role as string;
   const userName = session.user?.name || "User";
 
   const navItems = NAV_ITEMS.filter((item) => item.roles.includes(role));
   const roleColor = ROLE_COLORS[role] || "from-brand-500 to-brand-700";
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("vidyazen-dashboard-theme") as DashboardTheme | null;
+    if (savedTheme && DASHBOARD_THEMES.some((item) => item.id === savedTheme)) {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  const updateTheme = (nextTheme: DashboardTheme) => {
+    setTheme(nextTheme);
+    window.localStorage.setItem("vidyazen-dashboard-theme", nextTheme);
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -149,7 +176,7 @@ export function DashboardShell({ session, children }: { session: Session; childr
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="dashboard-shell-root min-h-screen bg-slate-50 flex" data-dashboard-theme={theme}>
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 bg-white border-r border-slate-200 flex-col fixed inset-y-0 left-0 z-30">
         <SidebarContent />
@@ -203,10 +230,37 @@ export function DashboardShell({ session, children }: { session: Session; childr
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="relative p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
+            <label className="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600">
+              <Palette size={16} className="text-slate-400" />
+              <select
+                value={theme}
+                onChange={(e) => updateTheme(e.target.value as DashboardTheme)}
+                className="bg-transparent text-sm outline-none"
+                aria-label="Dashboard theme"
+              >
+                {DASHBOARD_THEMES.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <select
+              value={theme}
+              onChange={(e) => updateTheme(e.target.value as DashboardTheme)}
+              className="sm:hidden rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm font-medium text-slate-600 outline-none"
+              aria-label="Dashboard theme"
+            >
+              {DASHBOARD_THEMES.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <Link href="/dashboard/notifications" className="relative p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
               <Bell size={19} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
+            </Link>
             <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${roleColor} flex items-center justify-center text-white text-sm font-bold`}>
               {getInitials(userName)}
             </div>

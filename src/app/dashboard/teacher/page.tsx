@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { BookOpen, Users, CalendarCheck, ClipboardList, ArrowRight } from "lucide-react";
 import { StatCard, Card, Badge } from "@/components/ui";
 import Link from "next/link";
+import { formatDate } from "@/lib/utils";
 
 export default function TeacherDashboard() {
   const [data, setData] = useState<any>(null);
@@ -14,6 +15,7 @@ export default function TeacherDashboard() {
 
   const teacher = data?.teacher;
   const myStudentCount = data?.myStudentCount || 0;
+  const recentAttendance = data?.recentAttendance || [];
 
   if (loading) return (
     <div className="space-y-6">
@@ -48,8 +50,8 @@ export default function TeacherDashboard() {
                       <BookOpen size={18} className="text-blue-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-800">{cls.name}</div>
-                      <div className="text-xs text-slate-400">{cls._count?.students} students</div>
+                      <div className="font-semibold text-slate-800">{cls.className || cls.name}</div>
+                      <div className="text-xs text-slate-400">{cls.sections?.length || 0} sections · {cls._count?.students} students</div>
                     </div>
                   </div>
                   <Link href="/dashboard/teacher/attendance" className="text-brand-600 hover:text-brand-700">
@@ -82,6 +84,26 @@ export default function TeacherDashboard() {
           </div>
         </Card>
       </div>
+
+      <Card title="Recent Attendance Updates" subtitle="Latest records you saved">
+        <div className="space-y-3">
+          {recentAttendance.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-sm">No attendance records yet</div>
+          ) : (
+            recentAttendance.slice(0, 6).map((record: any) => (
+              <div key={record.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                <div>
+                  <div className="text-sm font-semibold text-slate-800">{record.student?.user?.name}</div>
+                  <div className="text-xs text-slate-400">
+                    {record.class?.className || record.class?.name}{record.section ? ` · Section ${record.section.sectionName}` : ""} · {formatDate(record.date)}
+                  </div>
+                </div>
+                <Badge variant={record.status === "PRESENT" ? "success" : record.status === "ABSENT" ? "danger" : record.status === "LATE" ? "warning" : "info"}>{record.status}</Badge>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
 
       {/* Quick actions */}
       <Card title="Quick Actions">

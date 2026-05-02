@@ -44,11 +44,11 @@ export async function GET(req: NextRequest) {
       // Monthly fee collection for chart
       const monthlyFees = await prisma.$queryRaw`
         SELECT 
-          TO_CHAR(paid_date, 'Mon') as month,
-          EXTRACT(MONTH FROM paid_date) as month_num,
+          DATE_FORMAT(paidDate, '%b') as month,
+          MONTH(paidDate) as month_num,
           SUM(amount) as total
         FROM fees
-        WHERE status = 'PAID' AND paid_date >= NOW() - INTERVAL '6 months'
+        WHERE status = 'PAID' AND paidDate >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
         GROUP BY month, month_num
         ORDER BY month_num
       `;
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
           COUNT(CASE WHEN status = 'ABSENT' THEN 1 END) as absent,
           COUNT(*) as total
         FROM attendance_records
-        WHERE date >= NOW() - INTERVAL '7 days'
+        WHERE date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
         GROUP BY DATE(date)
         ORDER BY day
       `;
@@ -77,6 +77,16 @@ export async function GET(req: NextRequest) {
         recentAnnouncements,
         upcomingEvents,
         attendanceToday,
+        recentAttendance: await prisma.attendanceRecord.findMany({
+          take: 8,
+          orderBy: { createdAt: "desc" },
+          include: {
+            student: { include: { user: { select: { name: true } }, class: true, section: true } },
+            teacher: { include: { user: { select: { name: true } } } },
+            class: true,
+            section: true,
+          },
+        }),
         monthlyFees,
         attendanceTrend,
       });
@@ -86,21 +96,40 @@ export async function GET(req: NextRequest) {
       const teacher = await prisma.teacher.findUnique({
         where: { userId },
         include: {
-          classes: { include: { _count: { select: { students: true } } } },
+          classes: { include: { sections: { include: { _count: { select: { students: true } } }, orderBy: { sectionName: "asc" } }, _count: { select: { students: true } } } },
+          sections: { include: { class: true, _count: { select: { students: true } } }, orderBy: { sectionName: "asc" } },
           subjects: { include: { subject: true } },
+          assignments: { orderBy: { createdAt: "desc" }, take: 5, include: { class: true, _count: { select: { submissions: true } } } },
         },
       });
 
-      const myStudentCount = teacher?.classes.reduce((sum, c) => sum + c._count.students, 0) || 0;
+      const sectionOnlyClasses = (teacher?.sections || [])
+        .filter((section) => !(teacher?.classes || []).some((cls) => cls.id === section.classId))
+        .map((section) => ({
+          ...section.class,
+          sections: [section],
+          _count: { students: section._count.students },
+        }));
+      if (teacher) {
+        (teacher as any).classes = [...teacher.classes, ...sectionOnlyClasses];
+      }
+
+      const myStudentCount =
+        teacher?.sections.reduce((sum, section) => sum + section._count.students, 0) ||
+        teacher?.classes.reduce((sum, c) => sum + c._count.students, 0) ||
+        0;
+      const submissionCount = await prisma.assignmentSubmission.count({
+        where: { assignment: { teacherId: teacher?.id } },
+      });
 
       const recentAttendance = await prisma.attendanceRecord.findMany({
         where: { teacherId: teacher?.id },
         take: 10,
         orderBy: { date: "desc" },
-        include: { student: { include: { user: { select: { name: true } } } } },
+        include: { student: { include: { user: { select: { name: true } }, section: true, class: true } }, class: true, section: true },
       });
 
-      return NextResponse.json({ teacher, myStudentCount, recentAttendance });
+      return NextResponse.json({ teacher, myStudentCount, submissionCount, recentAttendance });
     }
 
     if (role === "STUDENT") {
@@ -108,17 +137,33 @@ export async function GET(req: NextRequest) {
         where: { userId },
         include: {
           class: { include: { subjects: { include: { subject: true } } } },
+          section: { include: { students: { include: { user: { select: { name: true, avatar: true } } } } } },
           grades: { include: { subject: true }, orderBy: { examDate: "desc" }, take: 10 },
           fees: { orderBy: { dueDate: "asc" }, take: 5 },
           attendance: { orderBy: { date: "desc" }, take: 30 },
+          enrollments: { include: { class: true }, orderBy: { joinedAt: "desc" } },
+          submissions: { include: { assignment: { include: { class: true } } }, orderBy: { submittedAt: "desc" }, take: 10 },
         },
+      });
+
+      const assignments = await prisma.assignment.findMany({
+        where: {
+          status: "PUBLISHED",
+          OR: [
+            { classId: student?.classId || "" },
+            { class: { enrollments: { some: { studentId: student?.id || "" } } } },
+          ],
+        },
+        include: { class: true, submissions: { where: { studentId: student?.id || "" } } },
+        orderBy: { dueDate: "asc" },
+        take: 8,
       });
 
       const totalAttendance = await prisma.attendanceRecord.count({ where: { studentId: student?.id } });
       const presentCount = await prisma.attendanceRecord.count({ where: { studentId: student?.id, status: "PRESENT" } });
       const attendancePercent = totalAttendance ? Math.round((presentCount / totalAttendance) * 100) : 0;
 
-      return NextResponse.json({ student, attendancePercent });
+      return NextResponse.json({ student, attendancePercent, assignments });
     }
 
     if (role === "PARENT") {
@@ -129,6 +174,7 @@ export async function GET(req: NextRequest) {
             include: {
               user: { select: { name: true, email: true, avatar: true } },
               class: true,
+              section: true,
               grades: { orderBy: { examDate: "desc" }, take: 5, include: { subject: true } },
               fees: { where: { status: { in: ["PENDING", "OVERDUE"] } } },
               attendance: { orderBy: { date: "desc" }, take: 10 },

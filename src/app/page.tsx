@@ -127,9 +127,9 @@ const PLANS = [
   },
 ];
 
-function FloatingOrb({ className }: { className: string }) {
+function FloatingOrb({ className, style }: { className: string; style?: React.CSSProperties }) {
   return (
-    <div className={`absolute rounded-full blur-3xl opacity-30 animate-float pointer-events-none ${className}`} />
+    <div className={`absolute rounded-full blur-3xl opacity-30 animate-float pointer-events-none ${className}`} style={style} />
   );
 }
 
@@ -266,7 +266,7 @@ export default function LandingPage() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-brand-500/30 bg-brand-500/10 text-brand-300 text-sm font-medium mb-8"
           >
             <Zap size={14} className="text-brand-400" />
-            India's Smartest Institute Management System
+            India&apos;s Smartest Institute Management System
             <ChevronRight size={14} />
           </motion.div>
 
@@ -444,7 +444,7 @@ export default function LandingPage() {
                     <Star key={j} size={14} className="fill-amber-400 text-amber-400" />
                   ))}
                 </div>
-                <p className="text-slate-300 text-sm leading-relaxed mb-5">"{t.text}"</p>
+                <p className="text-slate-300 text-sm leading-relaxed mb-5">&quot;{t.text}&quot;</p>
                 <div>
                   <div className="font-semibold text-white text-sm">{t.name}</div>
                   <div className="text-slate-500 text-xs mt-0.5">{t.role}</div>
@@ -560,7 +560,7 @@ export default function LandingPage() {
               <span className="font-display font-bold text-white">Vidya<span className="text-brand-400">Zen</span></span>
             </div>
             <p className="text-slate-600 text-sm text-center">
-              © {new Date().getFullYear()} VidyaZen. Built with ❤️ for India's educators.
+              © {new Date().getFullYear()} VidyaZen. Built with ❤️ for India&apos;s educators.
             </p>
             <div className="flex gap-6 text-slate-500 text-sm">
               <a href="#" className="hover:text-white transition-colors">Privacy</a>

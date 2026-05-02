@@ -7,15 +7,15 @@ import { motion } from "framer-motion";
 import { GraduationCap, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 
 const DEMO_CREDENTIALS = [
-  { label: "Admin", email: "admin@vidyazen.edu", password: "admin@123", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" },
-  { label: "Teacher", email: "priya.math@vidyazen.edu", password: "teacher@123", color: "bg-blue-500/20 text-blue-300 border-blue-500/30" },
-  { label: "Student", email: "rahul.mehta@vidyazen.edu", password: "student@123", color: "bg-green-500/20 text-green-300 border-green-500/30" },
-  { label: "Parent", email: "suresh.mehta@gmail.com", password: "parent@123", color: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
+  { label: "Admin", email: "admin@vidyazen.edu", password: "admin@123", role: "ADMIN", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" },
+  { label: "Teacher", email: "priya.math@vidyazen.edu", password: "teacher@123", role: "TEACHER", color: "bg-blue-500/20 text-blue-300 border-blue-500/30" },
+  { label: "Student", email: "rahul.mehta@vidyazen.edu", password: "student@123", role: "STUDENT", color: "bg-green-500/20 text-green-300 border-green-500/30" },
+  { label: "Parent", email: "suresh.mehta@gmail.com", password: "parent@123", role: "PARENT", color: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
 ];
 
 export default function LoginPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ email: "", password: "", role: "STUDENT" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -28,10 +28,11 @@ export default function LoginPage() {
       const result = await signIn("credentials", {
         email: form.email,
         password: form.password,
+        role: form.role,
         redirect: false,
       });
       if (result?.error) {
-        setError("Invalid email or password. Please try again.");
+        setError(result.error.includes("registered as") ? result.error : "Invalid email, password, or role. Please try again.");
       } else {
         router.push("/dashboard");
         router.refresh();
@@ -43,8 +44,8 @@ export default function LoginPage() {
     }
   };
 
-  const fillDemo = (cred: { email: string; password: string }) => {
-    setForm({ email: cred.email, password: cred.password });
+  const fillDemo = (cred: { email: string; password: string; role: string }) => {
+    setForm({ email: cred.email, password: cred.password, role: cred.role });
     setError("");
   };
 
@@ -119,6 +120,21 @@ export default function LoginPage() {
                 placeholder="you@school.edu"
                 className="w-full bg-white/5 border border-white/10 focus:border-brand-500 text-white placeholder-slate-600 rounded-xl px-4 py-3.5 text-sm outline-none transition-colors"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Role</label>
+              <select
+                required
+                value={form.role}
+                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+                className="w-full bg-white/5 border border-white/10 focus:border-brand-500 text-white rounded-xl px-4 py-3.5 text-sm outline-none transition-colors"
+              >
+                <option className="bg-slate-900" value="STUDENT">Student</option>
+                <option className="bg-slate-900" value="TEACHER">Teacher</option>
+                <option className="bg-slate-900" value="ADMIN">Admin</option>
+                <option className="bg-slate-900" value="PARENT">Parent</option>
+              </select>
             </div>
 
             <div>

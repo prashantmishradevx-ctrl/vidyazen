@@ -11,12 +11,14 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const classId = searchParams.get("classId");
+    const sectionId = searchParams.get("sectionId");
     const date = searchParams.get("date");
     const studentId = searchParams.get("studentId");
     const month = searchParams.get("month");
 
     let where: any = {};
     if (classId) where.classId = classId;
+    if (sectionId) where.sectionId = sectionId;
     if (studentId) where.studentId = studentId;
     if (date) {
       const d = new Date(date);
@@ -39,8 +41,10 @@ export async function GET(req: NextRequest) {
         student: {
           include: {
             user: { select: { name: true, avatar: true } },
+            section: true,
           },
         },
+        section: true,
       },
       orderBy: { date: "desc" },
     });
@@ -57,7 +61,7 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { records, classId, teacherId, date } = body;
+    const { records, classId, sectionId, teacherId, date } = body;
 
     // Bulk upsert attendance
     const ops = records.map(
@@ -70,10 +74,12 @@ export async function POST(req: NextRequest) {
               classId,
             },
           },
-          update: { status: r.status, remarks: r.remarks },
+          update: { status: r.status, remarks: r.remarks, sectionId: sectionId || null },
+          // Unique key remains per student/date/class for compatibility.
           create: {
             studentId: r.studentId,
             classId,
+            sectionId: sectionId || null,
             teacherId,
             date: new Date(date),
             status: r.status,

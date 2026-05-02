@@ -1,13 +1,18 @@
+import 'dotenv/config';
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const adminPassword = await bcrypt.hash("admin@123", 10);
+  const teacherPassword = await bcrypt.hash("teacher@123", 10);
+  const studentPassword = await bcrypt.hash("student@123", 10);
+  const parentPassword = await bcrypt.hash("parent@123", 10);         
   console.log("🌱 Seeding VidyaZen database...");
 
   // Create Admin
-  const adminPassword = await bcrypt.hash("admin@123", 12);
+  
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@vidyazen.edu" },
     update: {},
@@ -27,7 +32,7 @@ async function main() {
   });
 
   // Create Teachers
-  const teacherPassword = await bcrypt.hash("teacher@123", 12);
+  
   const teacher1User = await prisma.user.upsert({
     where: { email: "priya.math@vidyazen.edu" },
     update: {},
@@ -101,47 +106,61 @@ async function main() {
   const teacher1 = await prisma.teacher.findUnique({ where: { userId: teacher1User.id } });
   const teacher2 = await prisma.teacher.findUnique({ where: { userId: teacher2User.id } });
 
-  // Create Classes
-  const class10A = await prisma.class.upsert({
-    where: { grade_section_academicYear: { grade: "10", section: "A", academicYear: "2024-25" } },
-    update: {},
-    create: {
-      name: "Grade 10A",
-      grade: "10",
-      section: "A",
-      teacherId: teacher1!.id,
-      capacity: 40,
-      room: "Room 101",
-      academicYear: "2024-25",
-    },
-  });
+  // Create Classes 1-12 and structured sections
+  const classes = [];
+  for (let grade = 1; grade <= 12; grade++) {
+    const classRecord = await prisma.class.upsert({
+      where: { grade_section_academicYear: { grade: String(grade), section: "ALL", academicYear: "2024-25" } },
+      update: { name: `Class ${grade}`, className: `Class ${grade}` },
+      create: {
+        name: `Class ${grade}`,
+        className: `Class ${grade}`,
+        code: `CLASS${grade}`,
+        grade: String(grade),
+        section: "ALL",
+        teacherId: grade % 2 === 0 ? teacher1!.id : teacher2!.id,
+        capacity: 120,
+        room: `Block ${grade}`,
+        academicYear: "2024-25",
+      },
+    });
 
-  const class10B = await prisma.class.upsert({
-    where: { grade_section_academicYear: { grade: "10", section: "B", academicYear: "2024-25" } },
-    update: {},
-    create: {
-      name: "Grade 10B",
-      grade: "10",
-      section: "B",
-      teacherId: teacher2!.id,
-      capacity: 40,
-      room: "Room 102",
-      academicYear: "2024-25",
-    },
-  });
+    classes.push(classRecord);
+
+    const sectionNames = grade >= 9 ? ["A", "B", "C"] : ["A", "B"];
+    for (const sectionName of sectionNames) {
+      await prisma.section.upsert({
+        where: { classId_sectionName: { classId: classRecord.id, sectionName } },
+        update: {
+          teacherId: sectionName === "A" ? teacher1!.id : teacher2!.id,
+          room: `Room ${grade}${sectionName}`,
+        },
+        create: {
+          classId: classRecord.id,
+          sectionName,
+          teacherId: sectionName === "A" ? teacher1!.id : teacher2!.id,
+          room: `Room ${grade}${sectionName}`,
+          capacity: 40,
+        },
+      });
+    }
+  }
+
+  const class10 = classes[9];
+  const class10A = await prisma.section.findUnique({ where: { classId_sectionName: { classId: class10.id, sectionName: "A" } } });
 
   // Link subjects to class
   const subjectsForClass = [mathSubject.id, scienceSubject.id, englishSubject.id, historySubject.id, computerSubject.id];
   for (const subjectId of subjectsForClass) {
     await prisma.classSubject.upsert({
-      where: { classId_subjectId: { classId: class10A.id, subjectId } },
+      where: { classId_subjectId: { classId: class10.id, subjectId } },
       update: {},
-      create: { classId: class10A.id, subjectId },
+      create: { classId: class10.id, subjectId },
     });
   }
 
   // Create Parents
-  const parentPassword = await bcrypt.hash("parent@123", 12);
+  
   const parent1User = await prisma.user.upsert({
     where: { email: "suresh.mehta@gmail.com" },
     update: {},
@@ -163,7 +182,7 @@ async function main() {
   const parent1 = await prisma.parent.findUnique({ where: { userId: parent1User.id } });
 
   // Create Students
-  const studentPassword = await bcrypt.hash("student@123", 12);
+  
   await prisma.user.upsert({
     where: { email: "rahul.mehta@vidyazen.edu" },
     update: {},
@@ -176,7 +195,8 @@ async function main() {
       student: {
         create: {
           studentId: "STU001",
-          classId: class10A.id,
+          classId: class10.id,
+          sectionId: class10A!.id,
           rollNumber: "01",
           parentId: parent1!.id,
           admissionDate: new Date("2022-06-01"),
@@ -197,7 +217,8 @@ async function main() {
       student: {
         create: {
           studentId: "STU002",
-          classId: class10A.id,
+          classId: class10.id,
+          sectionId: class10A!.id,
           rollNumber: "02",
           admissionDate: new Date("2022-06-01"),
         },

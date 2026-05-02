@@ -21,6 +21,7 @@ export default function TeacherAttendancePage() {
   const { data: session } = useSession();
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [students, setStudents] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
@@ -33,14 +34,18 @@ export default function TeacherAttendancePage() {
       const teacherClasses = d.teacher?.classes || [];
       setClasses(teacherClasses);
       setTeacherId(d.teacher?.id || "");
-      if (teacherClasses.length > 0) setSelectedClass(teacherClasses[0].id);
+      if (teacherClasses.length > 0) {
+        setSelectedClass(teacherClasses[0].id);
+        setSelectedSection(teacherClasses[0].sections?.[0]?.id || "");
+      }
     });
   }, []);
 
   useEffect(() => {
     if (!selectedClass) return;
     setLoadingStudents(true);
-    fetch(`/api/students?classId=${selectedClass}`).then(r => r.json()).then(data => {
+    const sectionQuery = selectedSection ? `&sectionId=${selectedSection}` : "";
+    fetch(`/api/students?classId=${selectedClass}${sectionQuery}`).then(r => r.json()).then(data => {
       const list = Array.isArray(data) ? data : [];
       setStudents(list);
       // Initialize all as PRESENT
@@ -49,19 +54,20 @@ export default function TeacherAttendancePage() {
       setAttendance(init);
       setLoadingStudents(false);
     });
-  }, [selectedClass]);
+  }, [selectedClass, selectedSection]);
 
   // Load existing attendance for selected date
   useEffect(() => {
     if (!selectedClass || !selectedDate) return;
-    fetch(`/api/attendance?classId=${selectedClass}&date=${selectedDate}`).then(r => r.json()).then(records => {
+    const sectionQuery = selectedSection ? `&sectionId=${selectedSection}` : "";
+    fetch(`/api/attendance?classId=${selectedClass}&date=${selectedDate}${sectionQuery}`).then(r => r.json()).then(records => {
       if (Array.isArray(records) && records.length > 0) {
         const existing: Record<string, AttendanceStatus> = {};
         records.forEach((r: any) => { existing[r.studentId] = r.status; });
         setAttendance(prev => ({ ...prev, ...existing }));
       }
     });
-  }, [selectedClass, selectedDate]);
+  }, [selectedClass, selectedSection, selectedDate]);
 
   const setStatus = (studentId: string, status: AttendanceStatus) => {
     setAttendance(prev => ({ ...prev, [studentId]: status }));
@@ -81,7 +87,7 @@ export default function TeacherAttendancePage() {
       const res = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ records, classId: selectedClass, teacherId, date: selectedDate }),
+        body: JSON.stringify({ records, classId: selectedClass, sectionId: selectedSection, teacherId, date: selectedDate }),
       });
       if (res.ok) {
         showToast({ type: "success", title: "Attendance saved!", message: `${records.length} records updated` });
@@ -111,15 +117,31 @@ export default function TeacherAttendancePage() {
 
       {/* Controls */}
       <Card>
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">Select Class</label>
             <select
               className="w-full border border-slate-200 focus:border-brand-500 text-slate-800 rounded-xl px-3.5 py-2.5 text-sm outline-none bg-white"
               value={selectedClass}
-              onChange={e => setSelectedClass(e.target.value)}
+              onChange={e => {
+                const classId = e.target.value;
+                const cls = classes.find((c: any) => c.id === classId);
+                setSelectedClass(classId);
+                setSelectedSection(cls?.sections?.[0]?.id || "");
+              }}
             >
-              {classes.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {classes.map((c: any) => <option key={c.id} value={c.id}>{c.className || c.name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">Select Section</label>
+            <select
+              className="w-full border border-slate-200 focus:border-brand-500 text-slate-800 rounded-xl px-3.5 py-2.5 text-sm outline-none bg-white"
+              value={selectedSection}
+              onChange={e => setSelectedSection(e.target.value)}
+            >
+              <option value="">All sections</option>
+              {(classes.find((c: any) => c.id === selectedClass)?.sections || []).map((s: any) => <option key={s.id} value={s.id}>Section {s.sectionName}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">

@@ -1,7 +1,8 @@
+import bcrypt from "bcryptjs";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -15,16 +16,21 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        role: { label: "Role", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email.toLowerCase().trim() },
           include: { student: true, teacher: true, parent: true, admin: true },
         });
 
         if (!user) return null;
+
+        if (credentials.role && user.role !== credentials.role) {
+          throw new Error(`This account is registered as ${user.role.toLowerCase()}.`);
+        }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) return null;

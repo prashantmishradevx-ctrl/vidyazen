@@ -183,3 +183,108 @@ body {
     text-wrap: balance;
   }
 }
+
+@layer components {
+  .dashboard-shell-root {
+    --dash-bg: #f8fafc;
+    --dash-surface: #ffffff;
+    --dash-muted: #f1f5f9;
+    --dash-border: #e2e8f0;
+    --dash-text: #0f172a;
+    --dash-subtle: #64748b;
+    --dash-accent: #0f87e8;
+    --dash-accent-soft: #e0effe;
+    --dash-accent-text: #0453a0;
+  }
+
+  .dashboard-shell-root[data-dashboard-theme="ocean"] {
+    --dash-bg: #eef8fb;
+    --dash-surface: #ffffff;
+    --dash-muted: #dff3f7;
+    --dash-border: #b8dfe7;
+    --dash-text: #113947;
+    --dash-subtle: #4d7180;
+    --dash-accent: #0891b2;
+    --dash-accent-soft: #cffafe;
+    --dash-accent-text: #155e75;
+  }
+
+  .dashboard-shell-root[data-dashboard-theme="forest"] {
+    --dash-bg: #f0f7f1;
+    --dash-surface: #ffffff;
+    --dash-muted: #e1f0e4;
+    --dash-border: #bdd8c4;
+    --dash-text: #173b25;
+    --dash-subtle: #55705d;
+    --dash-accent: #16a34a;
+    --dash-accent-soft: #dcfce7;
+    --dash-accent-text: #166534;
+  }
+
+  .dashboard-shell-root[data-dashboard-theme="rose"] {
+    --dash-bg: #fff4f6;
+    --dash-surface: #ffffff;
+    --dash-muted: #ffe5eb;
+    --dash-border: #fecdd3;
+    --dash-text: #4a1d2b;
+    --dash-subtle: #8b5d6a;
+    --dash-accent: #e11d48;
+    --dash-accent-soft: #ffe4e6;
+    --dash-accent-text: #9f1239;
+  }
+
+  .dashboard-shell-root {
+    background: var(--dash-bg) !important;
+  }
+
+  .dashboard-shell-root aside,
+  .dashboard-shell-root header,
+  .dashboard-shell-root .bg-white {
+    background-color: var(--dash-surface) !important;
+    border-color: var(--dash-border) !important;
+  }
+
+  .dashboard-shell-root main,
+  .dashboard-shell-root .bg-slate-50 {
+    background-color: var(--dash-bg) !important;
+  }
+
+  .dashboard-shell-root .border-slate-100,
+  .dashboard-shell-root .border-slate-200 {
+    border-color: var(--dash-border) !important;
+  }
+
+  .dashboard-shell-root .text-slate-900,
+  .dashboard-shell-root .text-slate-800,
+  .dashboard-shell-root .text-slate-700 {
+    color: var(--dash-text) !important;
+  }
+
+  .dashboard-shell-root .text-slate-600,
+  .dashboard-shell-root .text-slate-500,
+  .dashboard-shell-root .text-slate-400 {
+    color: var(--dash-subtle) !important;
+  }
+
+  .dashboard-shell-root .bg-brand-50,
+  .dashboard-shell-root .bg-brand-100 {
+    background-color: var(--dash-accent-soft) !important;
+  }
+
+  .dashboard-shell-root .bg-brand-500,
+  .dashboard-shell-root .hover\:bg-brand-600:hover {
+    background-color: var(--dash-accent) !important;
+  }
+
+  .dashboard-shell-root .text-brand-400,
+  .dashboard-shell-root .text-brand-500,
+  .dashboard-shell-root .text-brand-600,
+  .dashboard-shell-root .text-brand-700 {
+    color: var(--dash-accent-text) !important;
+  }
+
+  .dashboard-shell-root .shadow-brand-500\/20,
+  .dashboard-shell-root .shadow-brand-500\/30 {
+    box-shadow: 0 10px 25px color-mix(in srgb, var(--dash-accent) 22%, transparent) !important;
+  }
+}
